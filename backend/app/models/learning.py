@@ -13,6 +13,8 @@ class Task(BaseModel):
     type: str
     estimated_minutes: int
     difficulty: Literal["easy", "medium", "hard"]
+    resource_url: str | None = None
+    resource_label: str | None = None
 
 class TaskWithFeedback(BaseModel):
     task: Task

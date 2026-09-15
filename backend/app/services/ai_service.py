@@ -31,53 +31,49 @@ def generate_first_task(goal: str, level: str, available_time: int) -> Task:
 
     return Task.model_validate_json(response.text)
 
-def generate_next_task(goal: str, level: str, previous_task, status: str, force_start_now: bool = False) -> tuple[Task, str | None]:
-    if force_start_now:
-        instruction = """
-        The student has SKIPPED multiple tasks in a row and seems unable to start at all.
-        Activate "Start Now mode": create an EXTREMELY tiny task (5-15 seconds),
-        almost trivially easy, just to get them to take any first action
-        (e.g. opening the editor and typing one single word or line).
-        Do not worry about teaching anything meaningful yet — the only goal is starting.
-        """
-    elif status == "completed":
-        instruction = """
-        The student COMPLETED the previous task successfully.
-        Create the next task as a logical next step, slightly more challenging.
-        """
-    elif status == "wrong":
-        instruction = """
-        The student got the previous task WRONG or misunderstood it.
-        First, briefly explain the correct idea in 1-2 simple sentences,
-        then create an EASIER task focusing on the same basic idea.
-        """
-    else:  # skipped
-        instruction = """
-        The student SKIPPED the previous task (could not start it).
-        Create a MUCH SMALLER and easier task (30 seconds to 2 minutes),
-        to reduce the starting friction as much as possible.
-        """
+def generate_concept(goal: str, level: str, previous_concept: str | None = None) -> Task:
+    if previous_concept:
+        context = f'The student just mastered the concept: "{previous_concept}". Now explain the next logical concept that builds on it.'
+    else:
+        context = "This is the very first concept for this goal. Pick the most fundamental starting concept."
 
-    prompt = f"""
-    A student's overall learning goal is: "{goal}"
+    research_prompt = f"""
+    A student's learning goal is: "{goal}"
     Their level is: {level}
-    Their previous task was: "{previous_task.title}" - {previous_task.description}
 
-    {instruction}
+    {context}
 
-    Do NOT create a big study plan. Create ONE tiny task only.
-    The "difficulty" field must reflect how hard THIS SPECIFIC TASK is,
-    NOT the student's overall level.
+    Explain this ONE concept in a very short, simple way (3-5 lines max),
+    with a small concrete example. Do not write a full lesson.
+
+    Also search and find ONE real, trustworthy resource (article, documentation,
+    or tutorial page) where the student can read more about this exact concept.
     """
 
-    response = client.models.generate_content(
-        model="gemini-flash-lite-latest",
-        contents=prompt,
+    research_response = client.models.generate_content(
+        model="gemini-flash-latest",
+        contents=research_prompt,
         config=types.GenerateContentConfig(
-            response_mime_type="application/json",
-            response_schema=TaskWithFeedback,
+            tools=[types.Tool(google_search=types.GoogleSearch())],
         ),
     )
 
-    result = TaskWithFeedback.model_validate_json(response.text)
-    return result.task, result.feedback
+    structuring_prompt = f"""
+    Convert the following explanation into the required task format.
+    Set "type" to "concept". Extract the real resource URL you find in the text
+    into "resource_url", and a short label for it into "resource_label".
+
+    Explanation text:
+    {research_response.text}
+    """
+
+    structured_response = client.models.generate_content(
+        model="gemini-flash-lite-latest",
+        contents=structuring_prompt,
+        config=types.GenerateContentConfig(
+            response_mime_type="application/json",
+            response_schema=Task,
+        ),
+    )
+
+    return Task.model_validate_json(structured_response.text)

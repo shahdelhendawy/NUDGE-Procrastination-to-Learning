@@ -8,6 +8,8 @@ def create_session(session_id: str, goal: str, level: str, available_time: int, 
         "current_task": task,
         "history": [],
         "skip_streak": 0,
+        "current_concept": None,
+        "concept_streak": 0,
     }
 
 def get_session(session_id: str):
