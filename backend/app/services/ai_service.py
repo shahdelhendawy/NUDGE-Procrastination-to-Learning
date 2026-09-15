@@ -1,7 +1,7 @@
 from google import genai
 from google.genai import types
 from app.core.config import GEMINI_API_KEY
-from app.models.learning import Task
+from app.models.learning import Task, TaskWithFeedback
 
 client = genai.Client(api_key=GEMINI_API_KEY)
 
@@ -30,3 +30,46 @@ def generate_first_task(goal: str, level: str, available_time: int) -> Task:
     )
 
     return Task.model_validate_json(response.text)
+
+def generate_next_task(goal: str, level: str, previous_task, status: str) -> tuple[Task, str | None]:
+    if status == "completed":
+        instruction = """
+        The student COMPLETED the previous task successfully.
+        Create the next task as a logical next step, slightly more challenging.
+        """
+    elif status == "wrong":
+        instruction = """
+        The student got the previous task WRONG or misunderstood it.
+        First, briefly explain the correct idea in 1-2 simple sentences,
+        then create an EASIER task focusing on the same basic idea.
+        """
+    else:  # skipped
+        instruction = """
+        The student SKIPPED the previous task (could not start it).
+        Create a MUCH SMALLER and easier task (30 seconds to 2 minutes),
+        to reduce the starting friction as much as possible.
+        """
+
+    prompt = f"""
+    A student's overall learning goal is: "{goal}"
+    Their level is: {level}
+    Their previous task was: "{previous_task.title}" - {previous_task.description}
+
+    {instruction}
+
+    Do NOT create a big study plan. Create ONE tiny task only.
+    The "difficulty" field must reflect how hard THIS SPECIFIC TASK is,
+    NOT the student's overall level.
+    """
+
+    response = client.models.generate_content(
+        model="gemini-flash-lite-latest",
+        contents=prompt,
+        config=types.GenerateContentConfig(
+            response_mime_type="application/json",
+            response_schema=TaskWithFeedback,
+        ),
+    )
+
+    result = TaskWithFeedback.model_validate_json(response.text)
+    return result.task, result.feedback

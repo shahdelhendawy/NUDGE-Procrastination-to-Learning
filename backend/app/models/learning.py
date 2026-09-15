@@ -14,6 +14,20 @@ class Task(BaseModel):
     estimated_minutes: int
     difficulty: Literal["easy", "medium", "hard"]
 
+class TaskWithFeedback(BaseModel):
+    task: Task
+    feedback: str | None = None
+
 class StartResponse(BaseModel):
     session_id: str
     tasks: List[Task]
+
+class AnswerRequest(BaseModel):
+    task_id: str
+    status: Literal["completed", "skipped", "wrong"]
+    answer: str | None = None
+
+class AnswerResponse(BaseModel):
+    session_id: str
+    next_task: Task
+    feedback: str | None = None
