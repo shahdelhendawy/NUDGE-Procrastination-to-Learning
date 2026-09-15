@@ -31,8 +31,16 @@ def generate_first_task(goal: str, level: str, available_time: int) -> Task:
 
     return Task.model_validate_json(response.text)
 
-def generate_next_task(goal: str, level: str, previous_task, status: str) -> tuple[Task, str | None]:
-    if status == "completed":
+def generate_next_task(goal: str, level: str, previous_task, status: str, force_start_now: bool = False) -> tuple[Task, str | None]:
+    if force_start_now:
+        instruction = """
+        The student has SKIPPED multiple tasks in a row and seems unable to start at all.
+        Activate "Start Now mode": create an EXTREMELY tiny task (5-15 seconds),
+        almost trivially easy, just to get them to take any first action
+        (e.g. opening the editor and typing one single word or line).
+        Do not worry about teaching anything meaningful yet — the only goal is starting.
+        """
+    elif status == "completed":
         instruction = """
         The student COMPLETED the previous task successfully.
         Create the next task as a logical next step, slightly more challenging.

@@ -41,11 +41,19 @@ def answer_task(session_id: str, request: AnswerRequest):
 
     previous_task = session["current_task"]
 
+    if request.status == "skipped":
+        session["skip_streak"] += 1
+    else:
+        session["skip_streak"] = 0
+
+    force_start_now = session["skip_streak"] >= 2
+
     next_task, feedback = generate_next_task(
         goal=session["goal"],
         level=session["level"],
         previous_task=previous_task,
         status=request.status,
+        force_start_now=force_start_now,
     )
 
     session["history"].append({

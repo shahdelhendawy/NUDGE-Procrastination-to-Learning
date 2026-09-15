@@ -7,6 +7,7 @@ def create_session(session_id: str, goal: str, level: str, available_time: int, 
         "available_time": available_time,
         "current_task": task,
         "history": [],
+        "skip_streak": 0,
     }
 
 def get_session(session_id: str):
