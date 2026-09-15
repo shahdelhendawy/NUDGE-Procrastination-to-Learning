@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Literal
 from pydantic import BaseModel
 
 class StartRequest(BaseModel):
@@ -12,7 +12,7 @@ class Task(BaseModel):
     description: str
     type: str
     estimated_minutes: int
-    difficulty: str
+    difficulty: Literal["easy", "medium", "hard"]
 
 class StartResponse(BaseModel):
     session_id: str

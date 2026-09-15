@@ -1,5 +1,7 @@
 from fastapi import FastAPI
-from app.models.learning import StartRequest, StartResponse, Task
+from app.models.learning import StartRequest, StartResponse
+from app.services.ai_service import generate_first_task
+import uuid
 
 app = FastAPI()
 
@@ -9,16 +11,13 @@ def health_check():
 
 @app.post("/start", response_model=StartResponse)
 def start_session(request: StartRequest):
+    task = generate_first_task(
+        goal=request.goal,
+        level=request.level,
+        available_time=request.available_time,
+    )
+
     return StartResponse(
-        session_id="test-session-1",
-        tasks=[
-            Task(
-                id="task_1",
-                title="Placeholder task",
-                description=f"A tiny first step for: {request.goal}",
-                type="read",
-                estimated_minutes=3,
-                difficulty="easy"
-            )
-        ]
+        session_id=str(uuid.uuid4()),
+        tasks=[task],
     )
